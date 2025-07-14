@@ -1,5 +1,6 @@
 // src/components/ChatInterface/ConnectionStatus.jsx
 import React from 'react';
+import './ConnectionStatus.css';
 
 const ConnectionStatus = ({ status, onRetry }) => {
   const getStatusText = () => {

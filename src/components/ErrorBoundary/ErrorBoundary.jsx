@@ -1,5 +1,6 @@
 // src/components/ErrorBoundary/ErrorBoundary.jsx
 import React from 'react';
+import './ErrorBoundary.css';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -12,6 +13,9 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    // Log the error for debugging
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    
     this.setState({
       error: error,
       errorInfo: errorInfo
@@ -29,9 +33,13 @@ class ErrorBoundary extends React.Component {
             <details className="error-details">
               <summary>Error Details</summary>
               <pre className="error-stack">
-                {this.state.error && this.state.error.toString()}
-                <br />
-                {this.state.errorInfo.componentStack}
+                {this.state.error ? this.state.error.toString() : 'Unknown error occurred'}
+                {this.state.errorInfo && this.state.errorInfo.componentStack && (
+                  <>
+                    <br />
+                    {this.state.errorInfo.componentStack}
+                  </>
+                )}
               </pre>
             </details>
             

@@ -1,0 +1,162 @@
+/* src/components/FileUpload/FileUpload.css */
+.file-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.1);
+  margin-bottom: 8px;
+}
+
+.file-select-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.file-select-button:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.file-select-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.file-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.file-icon {
+  font-size: 18px;
+}
+
+.file-name {
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.file-size {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.filename-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filename-input label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.filename-input input {
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: #fff;
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.upload-button,
+.cancel-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.upload-button {
+  background-color: #2563eb;
+  color: white;
+}
+
+.upload-button:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.cancel-button {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.upload-button:disabled,
+.cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #2563eb;
+  transition: width 0.3s;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 40px;
+  text-align: right;
+}
+
+.upload-error {
+  padding: 8px;
+  border-radius: 4px;
+  background-color: rgba(220, 38, 38, 0.1);
+  color: #ef4444;
+  font-size: 14px;
+}

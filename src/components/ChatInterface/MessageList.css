@@ -1,0 +1,6 @@
+/* src/components/ChatInterface/MessageList.css */
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

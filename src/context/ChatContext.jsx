@@ -1,5 +1,5 @@
-// src/context/ChatContext.js
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+// src/context/ChatContext.jsx
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 
 // Simple counter for unique IDs
 let messageIdCounter = 0;
@@ -10,26 +10,43 @@ const generateMessageId = () => {
   return `${Date.now()}-${messageIdCounter}`;
 };
 
+// Get stored session ID or create a new one
+const getInitialSessionId = () => {
+  if (typeof window === 'undefined') return `session-${Date.now()}`;
+  
+  const storedSessionId = localStorage.getItem('reportminer-session-id');
+  if (storedSessionId) return storedSessionId;
+  
+  const newSessionId = `session-${Date.now()}`;
+  localStorage.setItem('reportminer-session-id', newSessionId);
+  return newSessionId;
+};
+
 // Initial state
 const initialState = {
   messages: [],
-  currentModel: 'qwen3:latest',
-  availableModels: [],
+  currentModel: 'gpt-4o', // Default to backend model
+  availableModels: ['gpt-4o', 'gpt-3.5-turbo'],
   isLoading: false,
   isStreaming: false,
   error: null,
   connectionStatus: 'disconnected', // disconnected, connecting, connected, error
-  tools: [], // Available MCP tools
+  tools: [], // Available tools
   toolResults: {}, // Store tool execution results
   streamingMessage: '', // Current streaming message content
-  conversationId: null,
+  sessionId: getInitialSessionId(),
   modelInfo: null,
   settings: {
     temperature: 0.7,
     maxTokens: 2048,
     enableTools: true,
-    streamResponse: true,
-  }
+    includeSources: true,
+    useSystemPrompt: true,
+  },
+  // New properties for file upload support
+  uploadedFiles: [],
+  isUploading: false,
+  uploadProgress: 0,
 };
 
 // Action types
@@ -52,6 +69,11 @@ export const ActionTypes = {
   SET_MODEL_INFO: 'SET_MODEL_INFO',
   UPDATE_SETTINGS: 'UPDATE_SETTINGS',
   RESET_CHAT: 'RESET_CHAT',
+  // New action types for file upload
+  SET_SESSION_ID: 'SET_SESSION_ID',
+  ADD_UPLOADED_FILE: 'ADD_UPLOADED_FILE',
+  SET_UPLOADING: 'SET_UPLOADING',
+  SET_UPLOAD_PROGRESS: 'SET_UPLOAD_PROGRESS',
 };
 
 // Chat reducer
@@ -182,6 +204,7 @@ const chatReducer = (state, action) => {
       };
 
     case ActionTypes.RESET_CHAT:
+      // Note: we don't reset the sessionId or uploadedFiles when clearing chat
       return {
         ...state,
         messages: [],
@@ -190,6 +213,37 @@ const chatReducer = (state, action) => {
         isLoading: false,
         isStreaming: false,
         toolResults: {},
+      };
+
+    // New file upload action handlers
+    case ActionTypes.SET_SESSION_ID:
+      // Store the new session ID in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('reportminer-session-id', action.payload);
+      }
+      return {
+        ...state,
+        sessionId: action.payload,
+      };
+
+    case ActionTypes.ADD_UPLOADED_FILE:
+      return {
+        ...state,
+        uploadedFiles: [...state.uploadedFiles, action.payload],
+      };
+
+    case ActionTypes.SET_UPLOADING:
+      return {
+        ...state,
+        isUploading: action.payload,
+        // Reset upload progress when starting or completing upload
+        uploadProgress: action.payload ? state.uploadProgress : 0,
+      };
+
+    case ActionTypes.SET_UPLOAD_PROGRESS:
+      return {
+        ...state,
+        uploadProgress: action.payload,
       };
 
     default:
@@ -203,6 +257,13 @@ const ChatContext = createContext();
 // Provider component
 export const ChatProvider = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
+
+  // Store session ID in localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('reportminer-session-id', state.sessionId);
+    }
+  }, [state.sessionId]);
 
   // Memoize helper functions to prevent unnecessary re-renders
   const addMessage = useCallback((message) => {
@@ -248,6 +309,31 @@ export const ChatProvider = ({ children }) => {
   const resetChat = useCallback(() => {
     dispatch({ type: ActionTypes.RESET_CHAT });
   }, []);
+  
+  // New file upload helper functions
+  const setSessionId = useCallback((sessionId) => {
+    dispatch({ type: ActionTypes.SET_SESSION_ID, payload: sessionId });
+  }, []);
+  
+  const addUploadedFile = useCallback((fileData) => {
+    dispatch({ type: ActionTypes.ADD_UPLOADED_FILE, payload: fileData });
+  }, []);
+  
+  const setUploading = useCallback((isUploading) => {
+    dispatch({ type: ActionTypes.SET_UPLOADING, payload: isUploading });
+  }, []);
+  
+  const setUploadProgress = useCallback((progress) => {
+    dispatch({ type: ActionTypes.SET_UPLOAD_PROGRESS, payload: progress });
+  }, []);
+  
+  // Create a new session
+  const createNewSession = useCallback(() => {
+    const newSessionId = `session-${Date.now()}`;
+    setSessionId(newSessionId);
+    resetChat();
+    return newSessionId;
+  }, [setSessionId, resetChat]);
 
   const value = {
     state,
@@ -264,6 +350,12 @@ export const ChatProvider = ({ children }) => {
     clearStreamingMessage,
     setConnectionStatus,
     resetChat,
+    // New file upload helper functions
+    setSessionId,
+    addUploadedFile,
+    setUploading,
+    setUploadProgress,
+    createNewSession,
   };
 
   return (

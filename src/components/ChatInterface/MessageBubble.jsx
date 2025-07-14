@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import './MessageBubble.css';
 
 const MessageBubble = ({ message, currentModel }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [showMetadata, setShowMetadata] = useState(false);
+  const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const isUser = message.role === 'user';
@@ -14,6 +16,15 @@ const MessageBubble = ({ message, currentModel }) => {
   const isStreaming = message.isStreaming;
   const isTool = message.role === 'tool';
   const isToolResponse = message.isToolResponse;
+  const isFileUpload = message.isFileUpload;
+  const fileData = message.fileData;
+  const isSystem = message.role === 'system';
+
+  // Check if the message has sources
+  const hasSources = message.sources && message.sources.length > 0;
+  
+  // Check if message has tool usage data
+  const hasToolsUsed = message.toolsUsed && message.toolsUsed.length > 0;
 
   const handleCopy = async () => {
     try {
@@ -30,27 +41,51 @@ const MessageBubble = ({ message, currentModel }) => {
     return new Date(timestamp).toLocaleTimeString();
   };
 
-  const formatDuration = (nanoseconds) => {
-    if (!nanoseconds) return '';
-    const ms = nanoseconds / 1000000;
+  const formatDuration = (milliseconds) => {
+    if (!milliseconds) return '';
+    const ms = milliseconds;
     if (ms < 1000) return `${ms.toFixed(0)}ms`;
     return `${(ms / 1000).toFixed(1)}s`;
   };
 
-  const calculateTokensPerSecond = (tokens, duration) => {
-    if (!tokens || !duration) return '';
-    const seconds = duration / 1000000000; // Convert nanoseconds to seconds
-    return (tokens / seconds).toFixed(1);
+  // Format processing time
+  const formatProcessingTime = (time) => {
+    if (!time) return '';
+    return `${time.toFixed(2)}s`;
   };
 
-  const formatCode = (content) => {
-    // Simple code formatting without external library
-    const lines = content.split('\n');
-    return lines.map((line, index) => (
-      <div key={index} className="code-line">
-        {line}
+  // Format the file upload results
+  const formatFileResults = (results) => {
+    if (!results) return null;
+    
+    return (
+      <div className="file-results">
+        {results.text_segments > 0 && (
+          <div className="result-item">
+            <span className="result-label">Text segments:</span>
+            <span className="result-value">{results.text_segments}</span>
+          </div>
+        )}
+        {results.embeddings > 0 && (
+          <div className="result-item">
+            <span className="result-label">Embeddings:</span>
+            <span className="result-value">{results.embeddings}</span>
+          </div>
+        )}
+        {results.tables > 0 && (
+          <div className="result-item">
+            <span className="result-label">Tables:</span>
+            <span className="result-value">{results.tables}</span>
+          </div>
+        )}
+        {results.key_values > 0 && (
+          <div className="result-item">
+            <span className="result-label">Key values:</span>
+            <span className="result-value">{results.key_values}</span>
+          </div>
+        )}
       </div>
-    ));
+    );
   };
 
   // Custom components for ReactMarkdown
@@ -141,14 +176,14 @@ const MessageBubble = ({ message, currentModel }) => {
   };
 
   return (
-    <div className={`message-bubble ${isUser ? 'user' : 'assistant'} ${isError ? 'error' : ''} ${isStreaming ? 'streaming' : ''} ${isTool ? 'tool' : ''} ${isToolResponse ? 'tool-response' : ''}`}>
+    <div className={`message-bubble ${isUser ? 'user' : 'assistant'} ${isError ? 'error' : ''} ${isStreaming ? 'streaming' : ''} ${isTool ? 'tool' : ''} ${isToolResponse ? 'tool-response' : ''} ${isFileUpload ? 'file-upload' : ''} ${isSystem ? 'system' : ''}`}>
       <div className="message-header">
         <div className="message-role">
           <span className="role-icon">
-            {isUser ? '👤' : isTool ? '🔧' : isError ? '❌' : '🤖'}
+            {isUser ? '👤' : isTool ? '🔧' : isError ? '❌' : isFileUpload ? '📄' : isSystem ? '🔔' : '🤖'}
           </span>
           <span className="role-name">
-            {isUser ? 'You' : isTool ? `Tool: ${message.toolName || 'Function'}` : isError ? 'Error' : isToolResponse ? `${currentModel} (response)` : currentModel}
+            {isUser ? 'You' : isTool ? `Tool: ${message.toolName || 'Function'}` : isError ? 'Error' : isToolResponse ? `${currentModel} (response)` : isFileUpload ? 'File Upload' : isSystem ? 'System' : currentModel}
           </span>
         </div>
         
@@ -156,6 +191,13 @@ const MessageBubble = ({ message, currentModel }) => {
           {message.timestamp && (
             <span className="message-time">
               {formatTimestamp(message.timestamp)}
+            </span>
+          )}
+          
+          {/* Confidence display */}
+          {message.confidence && (
+            <span className="message-confidence" title="AI Confidence">
+              {(message.confidence * 100).toFixed(0)}% Conf.
             </span>
           )}
           
@@ -170,8 +212,19 @@ const MessageBubble = ({ message, currentModel }) => {
             </button>
           )}
           
+          {/* Sources toggle */}
+          {hasSources && (
+            <button
+              className="sources-toggle"
+              onClick={() => setShowSources(!showSources)}
+              title="Show/hide sources"
+            >
+              📚 {showSources ? 'Hide' : 'Show'} Sources
+            </button>
+          )}
+          
           {/* Metadata toggle */}
-          {message.metadata && (
+          {(message.metadata || message.processing_time) && (
             <button
               className="metadata-toggle"
               onClick={() => setShowMetadata(!showMetadata)}
@@ -182,17 +235,19 @@ const MessageBubble = ({ message, currentModel }) => {
           )}
           
           {/* Copy button */}
-          <button
-            className="copy-button"
-            onClick={handleCopy}
-            title="Copy message"
-          >
-            {copied ? '✅' : '📋'}
-          </button>
+          {!isFileUpload && !isSystem && (
+            <button
+              className="copy-button"
+              onClick={handleCopy}
+              title="Copy message"
+            >
+              {copied ? '✅' : '📋'}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Thinking content (Qwen3 specific) */}
+      {/* Thinking content */}
       {showThinking && message.thinking && (
         <div className="thinking-content">
           <div className="thinking-header">
@@ -227,64 +282,169 @@ const MessageBubble = ({ message, currentModel }) => {
         </div>
       )}
 
+      {/* File upload display */}
+      {isFileUpload && fileData && (
+        <div className="file-data">
+          <div className="file-header">
+            <span className="file-icon">📄</span>
+            <span className="file-name">{fileData.filename}</span>
+            <span className="file-type">{fileData.file_type}</span>
+          </div>
+          
+          <div className="file-details">
+            <div className="file-status">
+              <span className="status-label">Status:</span>
+              <span className={`status-value ${fileData.status}`}>
+                {fileData.status === 'completed' ? '✅ Completed' : fileData.status === 'processing' ? '⏳ Processing' : fileData.status}
+              </span>
+            </div>
+            
+            <div className="file-id">
+              <span className="id-label">Document ID:</span>
+              <span className="id-value">{fileData.document_id}</span>
+            </div>
+            
+            {fileData.ready_for_queries && (
+              <div className="file-ready">
+                <span className="ready-icon">✅</span>
+                <span className="ready-text">Ready for queries</span>
+              </div>
+            )}
+            
+            {fileData.processing_results && formatFileResults(fileData.processing_results)}
+          </div>
+        </div>
+      )}
+
       {/* Main message content */}
-      <div className="message-content">
-        {isStreaming ? (
-          <div className="streaming-content">
+      {!isFileUpload && (
+        <div className="message-content">
+          {isStreaming ? (
+            <div className="streaming-content">
+              <ReactMarkdown components={markdownComponents}>
+                {message.content}
+              </ReactMarkdown>
+              <span className="streaming-cursor">▊</span>
+            </div>
+          ) : (
             <ReactMarkdown components={markdownComponents}>
               {message.content}
             </ReactMarkdown>
-            <span className="streaming-cursor">▊</span>
+          )}
+        </div>
+      )}
+
+      {/* Tools used display */}
+      {hasToolsUsed && (
+        <div className="tools-used">
+          <span className="tools-used-label">🔧 Tools used:</span>
+          <div className="tools-used-list">
+            {message.toolsUsed.map((tool, index) => (
+              <span key={index} className="tool-badge">
+                {tool}
+              </span>
+            ))}
           </div>
-        ) : (
-          <ReactMarkdown components={markdownComponents}>
-            {message.content}
-          </ReactMarkdown>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Sources display */}
+      {showSources && hasSources && (
+        <div className="sources-container">
+          <div className="sources-header">
+            <span>📚 Sources:</span>
+          </div>
+          <div className="sources-list">
+            {message.sources.map((source, index) => (
+              <div key={index} className="source-item">
+                <div className="source-title">
+                  <span className="source-icon">📄</span>
+                  <span className="source-name">{source.title || source.filename || `Source ${index + 1}`}</span>
+                </div>
+                {source.content && (
+                  <div className="source-content">
+                    <ReactMarkdown components={markdownComponents}>
+                      {source.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
+                {source.url && (
+                  <div className="source-url">
+                    <a href={source.url} target="_blank" rel="noopener noreferrer">
+                      {source.url}
+                    </a>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Metadata display */}
-      {showMetadata && message.metadata && (
+      {showMetadata && (message.metadata || message.processing_time) && (
         <div className="message-metadata">
           <div className="metadata-grid">
-            {message.metadata.eval_count && message.metadata.eval_duration && (
+            {message.processing_time && (
               <div className="metadata-item">
-                <span className="metadata-label">Speed:</span>
+                <span className="metadata-label">Processing Time:</span>
                 <span className="metadata-value">
-                  {calculateTokensPerSecond(message.metadata.eval_count, message.metadata.eval_duration)} tokens/s
+                  {formatProcessingTime(message.processing_time)}
                 </span>
               </div>
             )}
             
-            {message.metadata.eval_count && (
+            {message.metadata?.model_used && (
+              <div className="metadata-item">
+                <span className="metadata-label">Model:</span>
+                <span className="metadata-value">{message.metadata.model_used}</span>
+              </div>
+            )}
+            
+            {message.metadata?.tools_executed !== undefined && (
+              <div className="metadata-item">
+                <span className="metadata-label">Tools Executed:</span>
+                <span className="metadata-value">{message.metadata.tools_executed}</span>
+              </div>
+            )}
+            
+            {message.metadata?.sources_found !== undefined && (
+              <div className="metadata-item">
+                <span className="metadata-label">Sources Found:</span>
+                <span className="metadata-value">{message.metadata.sources_found}</span>
+              </div>
+            )}
+            
+            {message.metadata?.response_type && (
+              <div className="metadata-item">
+                <span className="metadata-label">Response Type:</span>
+                <span className="metadata-value">{message.metadata.response_type}</span>
+              </div>
+            )}
+            
+            {/* Original Ollama metrics */}
+            {message.metadata?.eval_count && message.metadata?.eval_duration && (
+              <div className="metadata-item">
+                <span className="metadata-label">Speed:</span>
+                <span className="metadata-value">
+                  {(message.metadata.eval_count / (message.metadata.eval_duration / 1000000000)).toFixed(1)} tokens/s
+                </span>
+              </div>
+            )}
+            
+            {message.metadata?.eval_count && (
               <div className="metadata-item">
                 <span className="metadata-label">Tokens:</span>
                 <span className="metadata-value">{message.metadata.eval_count}</span>
               </div>
             )}
             
-            {message.metadata.total_duration && (
+            {message.metadata?.total_duration && (
               <div className="metadata-item">
                 <span className="metadata-label">Total Time:</span>
                 <span className="metadata-value">
                   {formatDuration(message.metadata.total_duration)}
                 </span>
-              </div>
-            )}
-            
-            {message.metadata.load_duration && (
-              <div className="metadata-item">
-                <span className="metadata-label">Load Time:</span>
-                <span className="metadata-value">
-                  {formatDuration(message.metadata.load_duration)}
-                </span>
-              </div>
-            )}
-            
-            {message.metadata.prompt_eval_count && (
-              <div className="metadata-item">
-                <span className="metadata-label">Prompt Tokens:</span>
-                <span className="metadata-value">{message.metadata.prompt_eval_count}</span>
               </div>
             )}
           </div>
