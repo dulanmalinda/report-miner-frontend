@@ -4,7 +4,7 @@ import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 import './MessageList.css';
 
-const MessageList = ({ messages, streamingMessage, isStreaming, currentModel }) => {
+const MessageList = ({ messages, streamingMessage, isStreaming, isLoading, currentModel }) => {
   return (
     <div className="message-list">
       {messages.filter(message => !(message.isStreaming && message.content === '')).map((message) => (
@@ -28,9 +28,9 @@ const MessageList = ({ messages, streamingMessage, isStreaming, currentModel }) 
         />
       )}
       
-      {/* Typing indicator when loading but not streaming */}
-      {isStreaming && !streamingMessage && (
-        <TypingIndicator key="typing-indicator" model={currentModel} />
+      {/* Loading/Typing indicator when waiting for response */}
+      {isLoading && (
+        <TypingIndicator key="loading-indicator" model={currentModel} />
       )}
     </div>
   );

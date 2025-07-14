@@ -14,6 +14,20 @@ const FileUpload = ({ onUpload, isUploading, uploadProgress, disabled }) => {
     if (!file) return;
 
     setError(null);
+    
+    // Check file extension
+    const extension = file.name.split('.').pop().toLowerCase();
+    const validExtensions = ['pdf', 'csv', 'xlsx', 'xls', 'docx', 'doc', 'json', 'html', 'jpg', 'jpeg', 'png', 'txt'];
+    
+    if (!validExtensions.includes(extension)) {
+      setError(`Unsupported file type: ${extension}. Please use PDF, CSV, Excel, Word, etc.`);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+    
     setSelectedFile(file);
     
     // Set default filename from file name (remove extension)
@@ -38,7 +52,42 @@ const FileUpload = ({ onUpload, isUploading, uploadProgress, disabled }) => {
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('filename', filename);
-      formData.append('type', selectedFile.type);
+      
+      // Map MIME type to simplified type that the server expects
+      let simpleType = 'text';
+      const mimeType = selectedFile.type.toLowerCase();
+      
+      if (mimeType.includes('pdf')) {
+        simpleType = 'pdf';
+      } else if (mimeType.includes('csv') || mimeType.includes('comma-separated-values')) {
+        simpleType = 'csv';
+      } else if (mimeType.includes('excel') || mimeType.includes('spreadsheetml')) {
+        simpleType = 'xlsx';
+      } else if (mimeType.includes('word') || mimeType.includes('document')) {
+        simpleType = 'docx';
+      } else if (mimeType.includes('text')) {
+        simpleType = 'text';
+      } else if (mimeType.includes('json')) {
+        simpleType = 'json';
+      } else if (mimeType.includes('html')) {
+        simpleType = 'html';
+      } else if (mimeType.includes('image')) {
+        simpleType = 'image';
+      }
+      
+      // Use file extension as fallback if MIME type mapping fails
+      if (simpleType === 'text') {
+        const extension = selectedFile.name.split('.').pop().toLowerCase();
+        if (['pdf', 'csv', 'xlsx', 'xls', 'docx', 'doc', 'json', 'html', 'jpg', 'jpeg', 'png'].includes(extension)) {
+          if (extension === 'xls') simpleType = 'xlsx';
+          else if (extension === 'doc') simpleType = 'docx';
+          else if (['jpg', 'jpeg', 'png'].includes(extension)) simpleType = 'image';
+          else simpleType = extension;
+        }
+      }
+      
+      console.log(`Mapped MIME type ${selectedFile.type} to simplified type: ${simpleType}`);
+      formData.append('type', simpleType);
 
       await onUpload(formData, selectedFile, filename);
       
@@ -81,6 +130,7 @@ const FileUpload = ({ onUpload, isUploading, uploadProgress, disabled }) => {
         ref={fileInputRef}
         style={{ display: 'none' }}
         disabled={isUploading || disabled}
+        accept=".pdf,.csv,.xlsx,.xls,.docx,.doc,.json,.html,.jpg,.jpeg,.png,.txt"
       />
       
       {!selectedFile ? (
@@ -89,9 +139,9 @@ const FileUpload = ({ onUpload, isUploading, uploadProgress, disabled }) => {
           onClick={handleButtonClick}
           disabled={isUploading || disabled}
           className="file-select-button"
-          title="Select a file to upload"
+          title="Select a file to upload (PDF, CSV, Excel, Word, etc.)"
         >
-          {isUploading ? '⏳ Uploading...' : '📎 Select File'}
+          {isUploading ? '⏳ Uploading...' : '📎 Select File (PDF, CSV, etc.)'}
         </button>
       ) : (
         <div className="file-details">

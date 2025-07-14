@@ -29,6 +29,17 @@
   font-size: 0.9rem;
 }
 
+.typing-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thinking-text {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .typing-animation {
   display: flex;
   gap: 5px;

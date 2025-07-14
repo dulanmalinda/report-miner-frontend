@@ -158,7 +158,11 @@ const ChatContainer = () => {
               </div>
             )}
 
-            <MessageList messages={state.messages} />
+            <MessageList 
+              messages={state.messages} 
+              isLoading={isLoading}
+              currentModel="ReportMiner AI"
+            />
             
             <div ref={messagesEndRef} />
           </div>

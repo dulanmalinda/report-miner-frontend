@@ -31,6 +31,7 @@ class ReportMinerAPI {
    */
   async checkConnection() {
     try {
+      console.log(`Checking connection to API at ${this.baseUrl}/query/`);
       // Instead of pinging a /ping endpoint that doesn't exist,
       // we'll do a simple OPTIONS request to one of the known endpoints
       const response = await fetch(`${this.baseUrl}/query/`, {
@@ -39,6 +40,8 @@ class ReportMinerAPI {
           'Content-Type': 'application/json',
         },
       });
+      
+      console.log(`Connection check response:`, response);
       
       // If we get any response, consider the API connected
       return { 
@@ -145,6 +148,8 @@ class ReportMinerAPI {
         // Use the full path for the upload endpoint
         xhr.open('POST', `${this.baseUrl}/upload/`, true);
         
+        // DO NOT set Content-Type header for multipart/form-data
+        // Let the browser set it automatically with the boundary parameter
         // Track upload progress if callback provided
         if (onProgress && typeof onProgress === 'function') {
           xhr.upload.onprogress = (event) => {

@@ -89,6 +89,14 @@ export const useReportMinerChat = () => {
       addMessage(userMessage);
       console.log('📝 Added user message to chat');
 
+      // Scroll to bottom to show the typing indicator
+      setTimeout(() => {
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 100);
+
       // Prepare API call
       const queryOptions = {
         sessionId: state.sessionId,
@@ -148,6 +156,14 @@ export const useReportMinerChat = () => {
       });
     } finally {
       setLoading(false);
+      
+      // Scroll to bottom after adding the response
+      setTimeout(() => {
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 100);
     }
   }, [
     state.sessionId,

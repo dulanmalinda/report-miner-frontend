@@ -10,10 +10,13 @@ const TypingIndicator = ({ model }) => {
           <span className="role-icon">🤖</span>
           <span className="role-name">{model}</span>
         </div>
-        <div className="typing-animation">
-          <span className="typing-dot"></span>
-          <span className="typing-dot"></span>
-          <span className="typing-dot"></span>
+        <div className="typing-content">
+          <span className="thinking-text">Thinking</span>
+          <div className="typing-animation">
+            <span className="typing-dot"></span>
+            <span className="typing-dot"></span>
+            <span className="typing-dot"></span>
+          </div>
         </div>
       </div>
     </div>
