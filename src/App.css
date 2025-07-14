@@ -5,6 +5,7 @@
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  background-color: #1f2937 !important; /* Dark grey background */
 }
 
 /* Reset default styles */
@@ -21,7 +22,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #1a1a1a;
+  background-color: #1f2937 !important; /* Dark grey background */
   color: #ffffff;
   overflow: hidden;
 }
@@ -62,25 +63,25 @@ input {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: #111827; /* Match the chat container color */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #404040;
+  background: #4b5563; /* Grey scrollbar thumb */
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #6b7280; /* Lighter grey on hover */
 }
 
 ::-webkit-scrollbar-corner {
-  background: #1a1a1a;
+  background: #111827; /* Match the chat container color */
 }
 
 /* Focus styles for accessibility */
 *:focus {
-  outline: 2px solid #007bff;
+  outline: 2px solid #4b5563; /* Grey focus outline */
   outline-offset: 2px;
 }
 
@@ -91,6 +92,6 @@ input {
 
 /* Ensure focus is visible for keyboard users */
 *:focus-visible {
-  outline: 2px solid #007bff;
+  outline: 2px solid #4b5563; /* Grey focus outline */
   outline-offset: 2px;
 }

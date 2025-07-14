@@ -2,6 +2,7 @@
 import React from 'react';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
+import './MessageList.css';
 
 const MessageList = ({ messages, streamingMessage, isStreaming, currentModel }) => {
   return (

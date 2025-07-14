@@ -1,5 +1,6 @@
 // src/components/ChatInterface/TypingIndicator.jsx
 import React from 'react';
+import './TypingIndicator.css';
 
 const TypingIndicator = ({ model }) => {
   return (

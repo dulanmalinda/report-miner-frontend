@@ -1,0 +1,286 @@
+// src/utils/reportMinerApi.js
+
+/**
+ * ReportMiner API Service
+ * Handles interaction with the ReportMiner backend API
+ */
+
+const API_BASE_URL = 'http://localhost:8000/api/query/chat';
+
+// Error class for API errors
+export class ReportMinerApiError extends Error {
+  constructor(message, status, code, data = null) {
+    super(message);
+    this.name = 'ReportMinerApiError';
+    this.status = status;
+    this.code = code;
+    this.data = data;
+  }
+}
+
+class ReportMinerAPI {
+  constructor(baseUrl = API_BASE_URL) {
+    this.baseUrl = baseUrl;
+  }
+
+  /**
+   * Check if the API is accessible
+   * @returns {Promise<Object>} Connection status
+   */
+  async checkConnection() {
+    try {
+      // Simple ping to check if API is available
+      const response = await fetch(`${this.baseUrl}/ping`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new ReportMinerApiError(
+          `Connection failed: ${response.status}`,
+          response.status,
+          'CONNECTION_ERROR'
+        );
+      }
+      
+      const data = await response.json();
+      return { 
+        connected: true, 
+        status: response.status,
+        data
+      };
+    } catch (error) {
+      console.error('API connection check failed:', error);
+      
+      if (error instanceof ReportMinerApiError) throw error;
+      
+      throw new ReportMinerApiError(
+        'Failed to connect to ReportMiner API. Please ensure the server is running.',
+        0,
+        'CONNECTION_ERROR'
+      );
+    }
+  }
+
+  /**
+   * Send a query to the chat endpoint
+   * @param {string} question The question to ask
+   * @param {Object} options Query options
+   * @returns {Promise<Object>} Query response
+   */
+  async sendQuery(question, options = {}) {
+    try {
+      const {
+        sessionId = `session-${Date.now()}`, 
+        includeTools = true, 
+        includeSources = true
+      } = options;
+      
+      console.log(`📤 Sending query to API:`, {
+        question,
+        sessionId,
+        includeTools,
+        includeSources
+      });
+
+      const payload = {
+        question,
+        include_tools: includeTools,
+        include_sources: includeSources,
+        session_id: sessionId
+      };
+
+      const response = await fetch(`${this.baseUrl}/query/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      
+      console.log(`📥 Received API response:`, {
+        success: data.success,
+        messagePreview: data.message?.substring(0, 100) + '...',
+        toolsUsed: data.tools_used,
+        sourcesCount: data.sources?.length || 0,
+        processingTime: data.processing_time,
+      });
+
+      if (!response.ok || !data.success) {
+        throw new ReportMinerApiError(
+          data.message || `Query failed: ${response.status}`,
+          response.status,
+          'QUERY_ERROR',
+          data
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.error('API query failed:', error);
+      
+      if (error instanceof ReportMinerApiError) throw error;
+      
+      throw new ReportMinerApiError(
+        error.message || 'Failed to send query to ReportMiner API',
+        0,
+        'QUERY_ERROR'
+      );
+    }
+  }
+
+  /**
+   * Upload a file to the chat
+   * @param {FormData} formData Form data containing the file and metadata
+   * @param {Function} onProgress Progress callback
+   * @returns {Promise<Object>} Upload response
+   */
+  async uploadFile(formData, onProgress = null) {
+    try {
+      console.log(`📤 Uploading file to API`);
+      
+      // Create XMLHttpRequest to track upload progress
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.open('POST', `${this.baseUrl}/upload/`, true);
+        
+        // Track upload progress if callback provided
+        if (onProgress && typeof onProgress === 'function') {
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = Math.round((event.loaded / event.total) * 100);
+              onProgress(percentComplete, event);
+            }
+          };
+        }
+        
+        xhr.onload = function() {
+          if (this.status >= 200 && this.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              
+              console.log(`📥 File upload response:`, {
+                success: response.success,
+                messagePreview: response.message,
+                documentId: response.data?.document_id,
+                filename: response.data?.filename,
+                status: response.data?.status,
+              });
+              
+              if (!response.success) {
+                reject(new ReportMinerApiError(
+                  response.message || 'File upload failed',
+                  this.status,
+                  'UPLOAD_ERROR',
+                  response
+                ));
+                return;
+              }
+              
+              resolve(response);
+            } catch (err) {
+              reject(new ReportMinerApiError(
+                'Invalid response format',
+                this.status,
+                'UPLOAD_ERROR'
+              ));
+            }
+          } else {
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              reject(new ReportMinerApiError(
+                errorData.message || `Upload failed: ${this.status}`,
+                this.status,
+                'UPLOAD_ERROR',
+                errorData
+              ));
+            } catch (err) {
+              reject(new ReportMinerApiError(
+                `Upload failed: ${this.status}`,
+                this.status,
+                'UPLOAD_ERROR'
+              ));
+            }
+          }
+        };
+        
+        xhr.onerror = function() {
+          reject(new ReportMinerApiError(
+            'Network error during file upload',
+            0,
+            'UPLOAD_ERROR'
+          ));
+        };
+        
+        // Send the form data
+        xhr.send(formData);
+      });
+    } catch (error) {
+      console.error('API file upload failed:', error);
+      
+      if (error instanceof ReportMinerApiError) throw error;
+      
+      throw new ReportMinerApiError(
+        error.message || 'Failed to upload file to ReportMiner API',
+        0,
+        'UPLOAD_ERROR'
+      );
+    }
+  }
+
+  /**
+   * Get session history
+   * @param {string} sessionId Session ID
+   * @returns {Promise<Object>} Session history
+   */
+  async getSessionHistory(sessionId) {
+    try {
+      console.log(`📤 Fetching session history for: ${sessionId}`);
+
+      const response = await fetch(`${this.baseUrl}/history/${sessionId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      
+      console.log(`📥 Received session history:`, {
+        success: data.success,
+        messageCount: data.messages?.length || 0,
+      });
+
+      if (!response.ok || !data.success) {
+        throw new ReportMinerApiError(
+          data.message || `Failed to fetch session history: ${response.status}`,
+          response.status,
+          'HISTORY_ERROR',
+          data
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.error('API session history fetch failed:', error);
+      
+      if (error instanceof ReportMinerApiError) throw error;
+      
+      throw new ReportMinerApiError(
+        error.message || 'Failed to fetch session history',
+        0,
+        'HISTORY_ERROR'
+      );
+    }
+  }
+}
+
+// Create and export a singleton instance
+export const reportMinerApi = new ReportMinerAPI();
+
+export default reportMinerApi;
