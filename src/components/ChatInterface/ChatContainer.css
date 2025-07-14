@@ -1,4 +1,39 @@
-/* src/components/ChatInterface/ChatContainer.css */
+.welcome-content.error-welcome {
+  background-color: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.endpoint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.endpoint-list code {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.retry-welcome-btn {
+  padding: 8px 16px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: background-color 0.2s;
+}
+
+.retry-welcome-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}/* src/components/ChatInterface/ChatContainer.css */
 .chat-container {
   display: flex;
   flex-direction: column;

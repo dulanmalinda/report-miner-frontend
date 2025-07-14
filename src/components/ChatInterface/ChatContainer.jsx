@@ -112,7 +112,7 @@ const ChatContainer = () => {
 
         {connectionStatus === 'error' && (
           <div className="status-banner error">
-            <span>🔴 Connection Error - Please ensure the ReportMiner API is running on localhost:8000</span>
+            <span>🔴 Connection Error - Please ensure the ReportMiner API is running on localhost:8000 and the endpoints /api/query/chat/query/ and /api/query/chat/upload/ are available</span>
             <button onClick={handleRetryConnection}>Retry</button>
           </div>
         )}
@@ -140,6 +140,20 @@ const ChatContainer = () => {
                       <span className="hint-text">Request analysis with "Give me an average laptop price from the dataset"</span>
                     </p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {state.messages.length === 0 && connectionStatus !== 'connected' && (
+              <div className="welcome-message">
+                <div className="welcome-content error-welcome">
+                  <h2>⚠️ Connection Required</h2>
+                  <p>Please ensure the ReportMiner API is running with the following endpoints:</p>
+                  <div className="endpoint-list">
+                    <code>http://localhost:8000/api/query/chat/query/</code>
+                    <code>http://localhost:8000/api/query/chat/upload/</code>
+                  </div>
+                  <button onClick={handleRetryConnection} className="retry-welcome-btn">Retry Connection</button>
                 </div>
               </div>
             )}

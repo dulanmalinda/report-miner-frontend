@@ -20,7 +20,9 @@ export class ReportMinerApiError extends Error {
 
 class ReportMinerAPI {
   constructor(baseUrl = API_BASE_URL) {
-    this.baseUrl = baseUrl;
+    // Ensure the baseUrl doesn't have a trailing slash
+    this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    console.log(`Initializing ReportMiner API with base URL: ${this.baseUrl}`);
   }
 
   /**
@@ -29,27 +31,19 @@ class ReportMinerAPI {
    */
   async checkConnection() {
     try {
-      // Simple ping to check if API is available
-      const response = await fetch(`${this.baseUrl}/ping`, {
-        method: 'GET',
+      // Instead of pinging a /ping endpoint that doesn't exist,
+      // we'll do a simple OPTIONS request to one of the known endpoints
+      const response = await fetch(`${this.baseUrl}/query/`, {
+        method: 'OPTIONS',
         headers: {
           'Content-Type': 'application/json',
         },
       });
       
-      if (!response.ok) {
-        throw new ReportMinerApiError(
-          `Connection failed: ${response.status}`,
-          response.status,
-          'CONNECTION_ERROR'
-        );
-      }
-      
-      const data = await response.json();
+      // If we get any response, consider the API connected
       return { 
         connected: true, 
-        status: response.status,
-        data
+        status: response.status
       };
     } catch (error) {
       console.error('API connection check failed:', error);
@@ -92,6 +86,7 @@ class ReportMinerAPI {
         session_id: sessionId
       };
 
+      // Use the full path for the query endpoint
       const response = await fetch(`${this.baseUrl}/query/`, {
         method: 'POST',
         headers: {
@@ -147,6 +142,7 @@ class ReportMinerAPI {
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         
+        // Use the full path for the upload endpoint
         xhr.open('POST', `${this.baseUrl}/upload/`, true);
         
         // Track upload progress if callback provided
