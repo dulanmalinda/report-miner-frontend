@@ -199,13 +199,13 @@ export const useReportMinerChat = () => {
         const getStatusMessage = (status) => {
           switch (status.toUpperCase()) {
             case 'PENDING':
-              return 'uploaded successfully and is pending processing';
+              return 'uploaded successfully';
             case 'PROCESSING':
-              return 'uploaded successfully and is being processed';
+              return 'uploaded successfully';
             case 'COMPLETED':
-              return 'uploaded and processed successfully';
+              return 'uploaded successfully';
             default:
-              return `uploaded successfully (Status: ${status})`;
+              return 'uploaded successfully';
           }
         };
         
