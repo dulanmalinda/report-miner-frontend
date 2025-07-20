@@ -176,6 +176,19 @@ class ReportMinerAPI {
                 return;
               }
               
+              // Check for explicit error statuses
+              if (response.status === 'ERROR' || response.status === 'FAILED') {
+                reject(new ReportMinerApiError(
+                  `File upload failed with status: ${response.status}`,
+                  this.status,
+                  'UPLOAD_ERROR',
+                  response
+                ));
+                return;
+              }
+              
+              // All other statuses (PENDING, PROCESSING, COMPLETED, etc.) are considered successful
+              
               resolve(response);
             } catch (err) {
               reject(new ReportMinerApiError(

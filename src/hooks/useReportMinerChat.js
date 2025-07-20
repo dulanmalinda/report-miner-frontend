@@ -195,19 +195,35 @@ export const useReportMinerChat = () => {
           uploadedAt: new Date().toISOString()
         };
         
+        // Get appropriate status message
+        const getStatusMessage = (status) => {
+          switch (status.toUpperCase()) {
+            case 'PENDING':
+              return 'uploaded successfully and is pending processing';
+            case 'PROCESSING':
+              return 'uploaded successfully and is being processed';
+            case 'COMPLETED':
+              return 'uploaded and processed successfully';
+            default:
+              return `uploaded successfully (Status: ${status})`;
+          }
+        };
+        
+        const statusMessage = getStatusMessage(response.status);
+        
         // Update the uploading message with success
         updateMessage({
           id: uploadingMessageId,
           role: 'system',
-          content: `File uploaded successfully: ${filename} (Status: ${response.status})`,
+          content: `File ${statusMessage}: ${filename}`,
           isUploading: false,
           timestamp: new Date().toISOString(),
         });
         
-        // Add file upload message
+        // Add file upload message with appropriate status
         addMessage({
           role: 'system',
-          content: `File uploaded: ${filename} (ID: ${response.id}, Status: ${response.status})`,
+          content: `📁 File ${statusMessage}: ${filename} (ID: ${response.id})`,
           fileData: fileData,
           isFileUpload: true,
           timestamp: new Date().toISOString(),
