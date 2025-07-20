@@ -220,16 +220,7 @@ export const useReportMinerChat = () => {
           timestamp: new Date().toISOString(),
         });
         
-        // Add file upload message with appropriate status
-        addMessage({
-          role: 'system',
-          content: `📁 File ${statusMessage}: ${filename} (ID: ${response.id})`,
-          fileData: fileData,
-          isFileUpload: true,
-          timestamp: new Date().toISOString(),
-        });
-        
-        // Add to uploaded files in state
+        // Add to uploaded files in state (for tracking purposes)
         addUploadedFile(fileData);
         
         return fileData;
