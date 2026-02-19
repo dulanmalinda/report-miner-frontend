@@ -5,7 +5,7 @@
  * Handles interaction with the ReportMiner backend API
  */
 
-const API_BASE_URL = 'http://localhost:8000/api/query/chat';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 // Error class for API errors
 export class ReportMinerApiError extends Error {
@@ -20,7 +20,9 @@ export class ReportMinerApiError extends Error {
 
 class ReportMinerAPI {
   constructor(baseUrl = API_BASE_URL) {
-    this.baseUrl = baseUrl;
+    // Ensure the baseUrl doesn't have a trailing slash
+    this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    console.log(`Initializing ReportMiner API with base URL: ${this.baseUrl}`);
   }
 
   /**
@@ -29,27 +31,22 @@ class ReportMinerAPI {
    */
   async checkConnection() {
     try {
-      // Simple ping to check if API is available
-      const response = await fetch(`${this.baseUrl}/ping`, {
-        method: 'GET',
+      console.log(`Checking connection to API at ${this.baseUrl}/query/ask/`);
+      // Instead of pinging a /ping endpoint that doesn't exist,
+      // we'll do a simple OPTIONS request to one of the known endpoints
+      const response = await fetch(`${this.baseUrl}/query/ask/`, {
+        method: 'OPTIONS',
         headers: {
           'Content-Type': 'application/json',
         },
       });
       
-      if (!response.ok) {
-        throw new ReportMinerApiError(
-          `Connection failed: ${response.status}`,
-          response.status,
-          'CONNECTION_ERROR'
-        );
-      }
+      console.log(`Connection check response:`, response);
       
-      const data = await response.json();
+      // If we get any response, consider the API connected
       return { 
         connected: true, 
-        status: response.status,
-        data
+        status: response.status
       };
     } catch (error) {
       console.error('API connection check failed:', error);
@@ -65,34 +62,23 @@ class ReportMinerAPI {
   }
 
   /**
-   * Send a query to the chat endpoint
+   * Send a query to the ask endpoint
    * @param {string} question The question to ask
-   * @param {Object} options Query options
+   * @param {Object} options Query options (for backwards compatibility)
    * @returns {Promise<Object>} Query response
    */
   async sendQuery(question, options = {}) {
     try {
-      const {
-        sessionId = `session-${Date.now()}`, 
-        includeTools = true, 
-        includeSources = true
-      } = options;
-      
       console.log(`📤 Sending query to API:`, {
-        question,
-        sessionId,
-        includeTools,
-        includeSources
+        question
       });
 
       const payload = {
-        question,
-        include_tools: includeTools,
-        include_sources: includeSources,
-        session_id: sessionId
+        question
       };
 
-      const response = await fetch(`${this.baseUrl}/query/`, {
+      // Use the full path for the query endpoint
+      const response = await fetch(`${this.baseUrl}/query/ask/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,16 +89,23 @@ class ReportMinerAPI {
       const data = await response.json();
       
       console.log(`📥 Received API response:`, {
-        success: data.success,
-        messagePreview: data.message?.substring(0, 100) + '...',
-        toolsUsed: data.tools_used,
+        answerPreview: data.answer?.substring(0, 100) + '...',
         sourcesCount: data.sources?.length || 0,
-        processingTime: data.processing_time,
       });
 
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
         throw new ReportMinerApiError(
-          data.message || `Query failed: ${response.status}`,
+          data.detail || data.message || `Query failed: ${response.status}`,
+          response.status,
+          'QUERY_ERROR',
+          data
+        );
+      }
+
+      // Check if response has required fields
+      if (!data.answer) {
+        throw new ReportMinerApiError(
+          'Invalid response format: missing answer field',
           response.status,
           'QUERY_ERROR',
           data
@@ -147,8 +140,11 @@ class ReportMinerAPI {
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         
-        xhr.open('POST', `${this.baseUrl}/upload/`, true);
+        // Use the full path for the upload endpoint
+        xhr.open('POST', `${this.baseUrl}/ingestion/upload/`, true);
         
+        // DO NOT set Content-Type header for multipart/form-data
+        // Let the browser set it automatically with the boundary parameter
         // Track upload progress if callback provided
         if (onProgress && typeof onProgress === 'function') {
           xhr.upload.onprogress = (event) => {
@@ -165,22 +161,33 @@ class ReportMinerAPI {
               const response = JSON.parse(xhr.responseText);
               
               console.log(`📥 File upload response:`, {
-                success: response.success,
-                messagePreview: response.message,
-                documentId: response.data?.document_id,
-                filename: response.data?.filename,
-                status: response.data?.status,
+                id: response.id,
+                status: response.status,
               });
               
-              if (!response.success) {
+              // Check if response has required fields (new format)
+              if (!response.id || !response.status) {
                 reject(new ReportMinerApiError(
-                  response.message || 'File upload failed',
+                  'Invalid upload response format',
                   this.status,
                   'UPLOAD_ERROR',
                   response
                 ));
                 return;
               }
+              
+              // Check for explicit error statuses
+              if (response.status === 'ERROR' || response.status === 'FAILED') {
+                reject(new ReportMinerApiError(
+                  `File upload failed with status: ${response.status}`,
+                  this.status,
+                  'UPLOAD_ERROR',
+                  response
+                ));
+                return;
+              }
+              
+              // All other statuses (PENDING, PROCESSING, COMPLETED, etc.) are considered successful
               
               resolve(response);
             } catch (err) {
@@ -194,7 +201,7 @@ class ReportMinerAPI {
             try {
               const errorData = JSON.parse(xhr.responseText);
               reject(new ReportMinerApiError(
-                errorData.message || `Upload failed: ${this.status}`,
+                errorData.detail || errorData.message || `Upload failed: ${this.status}`,
                 this.status,
                 'UPLOAD_ERROR',
                 errorData

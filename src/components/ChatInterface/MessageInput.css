@@ -73,6 +73,10 @@
   background-color: #dc2626;
 }
 
+.loading-button {
+  background-color: #6b7280 !important;
+}
+
 .loading-spinner {
   width: 16px;
   height: 16px;
@@ -80,6 +84,7 @@
   border-top: 2px solid white;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-right: 6px;
 }
 
 @keyframes spin {

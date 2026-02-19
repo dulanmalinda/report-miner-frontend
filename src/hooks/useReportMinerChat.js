@@ -89,33 +89,29 @@ export const useReportMinerChat = () => {
       addMessage(userMessage);
       console.log('📝 Added user message to chat');
 
-      // Prepare API call
-      const queryOptions = {
-        sessionId: state.sessionId,
-        includeTools: state.settings.enableTools,
-        includeSources: state.settings.includeSources,
-      };
-      
-      console.log('🚀 Sending query to API with options:', queryOptions);
+      // Scroll to bottom to show the typing indicator
+      setTimeout(() => {
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 100);
 
-      // Call the API
-      const response = await reportMinerApi.sendQuery(content, queryOptions);
+      console.log('🚀 Sending query to API');
+
+      // Call the API (simplified - no options needed for new endpoint)
+      const response = await reportMinerApi.sendQuery(content);
       
-      if (response.success) {
+      if (response.answer) {
         console.log('✅ Received successful response from API');
         
         // Add assistant message
         const assistantMessage = {
           id: `${Date.now()}-assistant`,
           role: 'assistant',
-          content: response.message,
+          content: response.answer,
           sources: response.sources || [],
-          toolsUsed: response.tools_used || [],
-          confidence: response.confidence,
-          processing_time: response.processing_time,
-          session_id: response.session_id,
           timestamp: new Date().toISOString(),
-          metadata: response.metadata,
         };
         
         // Add message to the chat
@@ -123,11 +119,11 @@ export const useReportMinerChat = () => {
         
         console.log('📝 Added assistant response to chat');
       } else {
-        // This should not happen as the API will throw an error for unsuccessful responses
-        console.error('⚠️ Received unsuccessful response from API');
+        // This should not happen as the API will throw an error for missing answer
+        console.error('⚠️ Received response without answer field');
         
         setError({
-          message: response.message || 'Failed to get response from API',
+          message: 'Invalid response format from API',
           code: 'API_ERROR',
         });
       }
@@ -148,11 +144,16 @@ export const useReportMinerChat = () => {
       });
     } finally {
       setLoading(false);
+      
+      // Scroll to bottom after adding the response
+      setTimeout(() => {
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 100);
     }
   }, [
-    state.sessionId,
-    state.settings.enableTools,
-    state.settings.includeSources,
     addMessage,
     setLoading,
     setError,
@@ -183,33 +184,48 @@ export const useReportMinerChat = () => {
         setUploadProgress(progress);
       });
       
-      if (response.success) {
-        console.log('✅ File uploaded successfully:', response.data);
+      if (response.id && response.status) {
+        console.log('✅ File uploaded successfully:', response);
+        
+        // Create file data object with new response format
+        const fileData = {
+          id: response.id,
+          filename: filename, // Use client-side filename since server doesn't return it
+          status: response.status,
+          uploadedAt: new Date().toISOString()
+        };
+        
+        // Get appropriate status message
+        const getStatusMessage = (status) => {
+          switch (status.toUpperCase()) {
+            case 'PENDING':
+              return 'uploaded successfully';
+            case 'PROCESSING':
+              return 'uploaded successfully';
+            case 'COMPLETED':
+              return 'uploaded successfully';
+            default:
+              return 'uploaded successfully';
+          }
+        };
+        
+        const statusMessage = getStatusMessage(response.status);
         
         // Update the uploading message with success
         updateMessage({
           id: uploadingMessageId,
           role: 'system',
-          content: `File uploaded successfully: ${filename}`,
+          content: `File ${statusMessage}: ${filename}`,
           isUploading: false,
           timestamp: new Date().toISOString(),
         });
         
-        // Add file upload message
-        addMessage({
-          role: 'system',
-          content: `File uploaded: ${response.data.filename}`,
-          fileData: response.data,
-          isFileUpload: true,
-          timestamp: new Date().toISOString(),
-        });
+        // Add to uploaded files in state (for tracking purposes)
+        addUploadedFile(fileData);
         
-        // Add to uploaded files in state
-        addUploadedFile(response.data);
-        
-        return response.data;
+        return fileData;
       } else {
-        throw new Error(response.message || 'File upload failed');
+        throw new Error('Invalid upload response format');
       }
     } catch (error) {
       console.error('❌ Error uploading file:', error);

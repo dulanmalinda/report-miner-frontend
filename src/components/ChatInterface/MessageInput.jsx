@@ -118,7 +118,7 @@ const MessageInput = ({
               ? false 
               : (!message.trim() || disabled || isLoading || isUploading)
           }
-          className={`send-button ${isStreaming ? 'stop-button' : ''}`}
+          className={`send-button ${isStreaming ? 'stop-button' : ''} ${isLoading ? 'loading-button' : ''}`}
         >
           {isStreaming ? (
             <>
@@ -127,7 +127,7 @@ const MessageInput = ({
           ) : isLoading ? (
             <>
               <div className="loading-spinner" />
-              Sending...
+              Thinking...
             </>
           ) : isUploading ? (
             <>
